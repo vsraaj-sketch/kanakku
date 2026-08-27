@@ -3,197 +3,476 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Kanakku</title>
+<title>Kanakku - Mobile App</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#2563eb">
+<meta name="theme-color" content="#b49cf8">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<script src="https://cdn.jsdelivr.net/npm/chart.js">
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
-}
-</script>
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+<!-- Google Fonts: Outfit -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- External Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 <style>
-:root{
-  --bg:#f8fafc;--card:#fff;--text:#0f172a;--muted:#64748b;
-  --line:#e2e8f0;--primary:#2563eb;--green:#16a34a;--red:#dc2626;
-  --orange:#ea580c;--bluebg:#eff6ff;
+:root {
+  --bg: #f3f2f8;
+  --card: #ffffff;
+  --card-border: rgba(140, 115, 230, 0.12);
+  --text: #1e1b2e;
+  --muted: #8b859e;
+  --line: #eeeaf7;
+  --primary: #7c4dff;
+  --primary-gradient: linear-gradient(135deg, #a78bfa, #7c4dff);
+  --primary-glow: rgba(124, 77, 255, 0.3);
+  --accent-purple: #8b5cf6;
+  --green-accent: #22c55e;
+  --green-light: #4ade80;
+  --red: #f43f5e;
+  --orange: #fb923c;
+  --blue: #38bdf8;
 }
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--text);padding-bottom:calc(70px + env(safe-area-inset-bottom))}
-header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;z-index:10}
-h1{margin:0;font-size:20px;font-weight:700}
-select,input,button{font:inherit}
-input,select{width:100%;height:44px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:white}
-button{border:0;border-radius:10px;height:44px;padding:0 16px;font-weight:600;cursor:pointer}
-.primary{background:var(--primary);color:white}
-.danger{background:white;color:var(--red);border:1px solid #fecaca;height:36px;padding:0 10px;font-size:12px}
 
-.cards-scroll{display:flex;gap:10px;overflow-x:auto;padding:16px;scroll-snap-type:x mandatory}
-.card{flex:0 0 140px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;scroll-snap-align:start}
-.card .label{font-size:11px;color:var(--muted);margin-bottom:4px}
-.card .value{font-size:16px;font-weight:700}
-.blue{color:var(--primary)}.red{color:var(--red)}.green{color:var(--green)}.orange{color:var(--orange)}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-.content{padding:0 16px}
-.tab-content{display:none}
-.tab-content.active{display:block}
+/* Mobile Device Container Frame */
+body {
+  margin: 0;
+  background: #e2dfed;
+  font-family: 'Outfit', -apple-system, sans-serif;
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 0;
+}
 
-.panel{background:white;border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
-.panel h2{font-size:16px;margin:0 0 10px}
-label{display:block;font-size:12px;color:var(--muted);font-weight:600;margin:10px 0 4px}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#mobile-frame {
+  width: 100%;
+  max-width: 410px;
+  height: 840px;
+  background: var(--bg);
+  border-radius: 44px;
+  border: 11px solid #1e1b2e;
+  box-shadow: 0 25px 60px rgba(30, 27, 46, 0.25), 0 0 0 2px rgba(167, 139, 250, 0.2);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
 
-.type{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.type button{background:#f1f5f9;color:#475569}
-.type .active{background:var(--primary);color:#fff}
-.quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.quick button{height:32px;padding:0 10px;background:#f1f5f9;color:#334155;font-size:12px}
+/* Dynamic Gradient Aura Header Background */
+#mobile-frame::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 240px;
+  background: linear-gradient(180deg, #d8ccff 0%, #ede7ff 60%, rgba(243, 242, 248, 0) 100%);
+  z-index: 0;
+  pointer-events: none;
+}
 
-.budget-row{margin:12px 0}
-.budget-head{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px}
-.bar{height:8px;background:#e2e8f0;border-radius:6px;overflow:hidden}
-.fill{height:100%;background:var(--primary)}
-.fill.over{background:var(--red)}
+/* Device Camera Notch */
+.notch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 130px;
+  height: 24px;
+  background: #1e1b2e;
+  border-bottom-left-radius: 14px;
+  border-bottom-right-radius: 14px;
+  z-index: 150;
+}
 
-.tx-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f1f5f9}
-.tx-item:last-child{border:0}
-.tx-info .tx-cat{font-weight:600;font-size:14px}
-.tx-info .tx-sub{font-size:12px;color:var(--muted)}
-.tx-amt{text-align:right;font-weight:700}
-.tx-actions{display:flex;align-items:center;gap:6px}
-.btn-icon{background:none;color:var(--muted);padding:4px;height:auto;font-size:14px}
-.expense{color:var(--red)}.payment{color:var(--orange)}
+/* App Header & Body Scrolling Structure */
+header { 
+  position: sticky; 
+  top: 0; 
+  background: rgba(216, 204, 255, 0.65); 
+  backdrop-filter: blur(16px); 
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(140, 115, 230, 0.15); 
+  padding: 34px 18px 14px 18px; 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  z-index: 10; 
+}
 
-.chart-container{position:relative;margin:auto;height:240px;width:100%}
+h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; color: #2e1d65; }
+h1 span { color: var(--primary); }
 
-/* Bottom Nav */
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;height:calc(60px + env(safe-area-inset-bottom));background:white;border-top:1px solid var(--line);display:flex;justify-around:space-around;padding-bottom:env(safe-area-inset-bottom);z-index:100}
-.nav-btn{background:none;border:0;color:var(--muted);font-size:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:1}
-.nav-btn.active{color:var(--primary);font-weight:700}
+select, input, button { font: inherit; }
+input, select { 
+  width: 100%; 
+  height: 46px; 
+  padding: 0 14px; 
+  border: 1px solid var(--card-border); 
+  border-radius: 14px; 
+  background: #ffffff; 
+  color: var(--text); 
+  outline: none;
+  box-shadow: 0 2px 6px rgba(124, 77, 255, 0.04);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.15); }
 
-/* FAB */
-.fab{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));right:16px;width:52px;height:52px;border-radius:26px;background:var(--primary);color:white;font-size:24px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(37,99,235,0.4);z-index:99}
+button { border: 0; border-radius: 14px; height: 46px; padding: 0 16px; font-weight: 600; cursor: pointer; transition: transform 0.1s, opacity 0.2s; }
+button:active { transform: scale(0.97); }
+.primary { background: var(--primary-gradient); color: #ffffff; font-weight: 700; box-shadow: 0 4px 14px var(--primary-glow); }
+.secondary { background: rgba(124, 77, 255, 0.08); color: var(--primary); border: 1px solid rgba(124, 77, 255, 0.2); }
+.danger { background: rgba(244, 63, 94, 0.1); color: var(--red); border: 1px solid rgba(244, 63, 94, 0.2); height: 36px; padding: 0 12px; font-size: 13px; border-radius: 10px; }
 
-/* Modal */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:flex-end;z-index:200}
-.modal.open{display:flex}
-.modal-body{background:white;width:100%;border-radius:20px 20px 0 0;padding:20px;max-height:90vh;overflow-y:auto}
+.app-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 80px;
+  scroll-behavior: smooth;
+  z-index: 1;
+}
+.app-scroll-area::-webkit-scrollbar { display: none; }
+
+/* Grid layout replacing horizontal scrolling */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding: 16px;
+}
+.summary-grid .card-full {
+  grid-column: span 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card { 
+  background: var(--card); 
+  border: 1px solid var(--card-border); 
+  border-radius: 18px; 
+  padding: 14px; 
+  box-shadow: 0 4px 20px rgba(140, 115, 230, 0.06);
+}
+.card .label { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+.card .value { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+.blue { color: var(--blue); } .red { color: var(--red); } .green { color: var(--green-accent); } .orange { color: var(--orange); } .yellow { color: var(--accent-purple); }
+
+.content { padding: 0 16px; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.panel { 
+  background: var(--card); 
+  border: 1px solid var(--card-border); 
+  border-radius: 20px; 
+  padding: 18px; 
+  margin-bottom: 16px; 
+  box-shadow: 0 6px 24px rgba(140, 115, 230, 0.07);
+}
+.panel h2 { font-size: 17px; font-weight: 700; margin: 0 0 14px; color: var(--text); display: flex; justify-content: space-between; align-items: center; }
+label { display: block; font-size: 12px; color: var(--muted); font-weight: 600; margin: 12px 0 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.type { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.type button { background: #f3f0fa; color: var(--muted); border: 1px solid var(--card-border); }
+.type .active { background: var(--primary-gradient); color: #ffffff; border-color: transparent; font-weight: 700; box-shadow: 0 4px 12px var(--primary-glow); }
+.quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.quick button { height: 32px; padding: 0 12px; background: rgba(124, 77, 255, 0.06); color: var(--primary); font-size: 12px; border: 1px solid rgba(124, 77, 255, 0.15); border-radius: 20px; }
+
+.budget-row { margin: 14px 0; }
+.budget-head { display: flex; justify-content: space-between; font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+.bar { height: 10px; background: #eef0f6; border-radius: 6px; overflow: hidden; border: 1px solid rgba(140, 115, 230, 0.1); }
+.fill { height: 100%; background: linear-gradient(90deg, #a78bfa, #7c4dff); border-radius: 6px; }
+.fill.over { background: linear-gradient(90deg, #fb7185, #f43f5e); }
+
+.tx-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.tx-item:last-child { border: 0; }
+.tx-info .tx-cat { font-weight: 600; font-size: 15px; color: var(--text); }
+.tx-info .tx-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.tx-amt { text-align: right; font-weight: 700; font-size: 16px; }
+.tx-actions { display: flex; align-items: center; gap: 8px; }
+.btn-icon { background: none; color: var(--muted); padding: 4px; height: auto; font-size: 14px; border-radius: 6px; }
+.expense { color: var(--red); } .payment { color: var(--green-accent); }
+
+.chart-container { position: relative; margin: auto; height: 220px; width: 100%; }
+
+/* Export Buttons Grid */
+.export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.export-btn { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; font-weight: 600; background: rgba(124, 77, 255, 0.05); color: var(--primary); border: 1px solid rgba(124, 77, 255, 0.18); }
+
+/* Bottom Navigation inside Phone Frame */
+.bottom-nav { position: absolute; bottom: 0; left: 0; right: 0; height: 65px; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--card-border); display: flex; justify-content: space-around; z-index: 100; border-bottom-left-radius: 32px; border-bottom-right-radius: 32px; }
+.nav-btn { background: none; border: 0; color: var(--muted); font-size: 11px; font-weight: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; flex: 1; }
+.nav-btn.active { color: var(--primary); font-weight: 700; }
+
+/* Floating Action Button inside Frame */
+.fab { 
+  position: absolute; 
+  bottom: 75px; 
+  right: 18px; 
+  width: 54px; 
+  height: 54px; 
+  border-radius: 27px; 
+  background: var(--primary-gradient); 
+  color: #ffffff; 
+  font-size: 28px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  box-shadow: 0 6px 20px var(--primary-glow); 
+  z-index: 99; 
+  font-weight: bold; 
+}
+
+/* Modal View inside Frame */
+.modal { position: absolute; inset: 0; background: rgba(30, 27, 46, 0.5); display: none; align-items: flex-end; z-index: 200; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-radius: 32px; }
+.modal.open { display: flex; }
+.modal-body { background: #ffffff; border: 1px solid var(--card-border); width: 100%; border-radius: 24px 24px 0 0; padding: 22px; max-height: 85vh; overflow-y: auto; color: var(--text); box-shadow: 0 -10px 40px rgba(124, 77, 255, 0.15); }
+
+/* MPIN Overlay Screens */
+.mpin-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #d8ccff 0%, #f3f2f8 60%);
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+}
+.pin-display {
+  display: flex;
+  gap: 12px;
+  margin: 24px 0 32px;
+}
+.pin-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(124, 77, 255, 0.3);
+  background: transparent;
+  transition: all 0.2s;
+}
+.pin-dot.filled {
+  background: var(--primary);
+  border-color: var(--primary);
+  box-shadow: 0 0 10px var(--primary-glow);
+}
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  width: 100%;
+  max-width: 260px;
+}
+.keypad button {
+  height: 60px;
+  border-radius: 30px;
+  font-size: 20px;
+  font-weight: 700;
+  background: #ffffff;
+  color: var(--text);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 4px 12px rgba(140, 115, 230, 0.08);
+}
 </style>
 </head>
 <body>
 
-<header>
-  <div>
-    <h1>Kanakku</h1>
-  </div>
-  <div style="display:flex;gap:6px;align-items:center">
-    <select id="monthFilter" style="height:36px;width:auto;font-size:13px"></select>
-    <button class="danger" id="clearBtn">Reset</button>
-  </div>
-</header>
-
-<div class="cards-scroll" id="summary"></div>
-
-<div class="content">
-  <!-- Tab 1: Dashboard & Transactions -->
-  <div id="tab-tx" class="tab-content active">
-    <div class="panel">
-      <h2>Spending Breakdown</h2>
-      <div class="chart-container">
-        <canvas id="expenseChart"></canvas>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h2>Recent Transactions</h2>
-      <div id="transactions"></div>
-    </div>
-  </div>
-
-  <!-- Tab 2: Budget -->
-  <div id="tab-budget" class="tab-content">
-    <div class="panel">
-      <h2>Salary Allocations</h2>
-      <label>Monthly Salary (₹)</label>
-      <input type="number" id="salary" min="0" step="500" placeholder="e.g. 140000">
-      <div id="budgetProgress" style="margin-top:16px"></div>
-    </div>
-  </div>
-
-  <!-- Tab 3: Credit Card -->
-  <div id="tab-card" class="tab-content">
-    <div class="panel">
-      <h2>Credit Card Summary</h2>
-      <div id="ccSummary"></div>
-      <label>Pay Bill</label>
-      <div class="row">
-        <input type="date" id="payDate">
-        <input type="number" id="payAmount" min="1" placeholder="Amount">
-      </div>
-      <button style="width:100%;margin-top:10px;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa" id="payBtn">Record Card Payment</button>
-    </div>
-  </div>
-</div>
-
-<button class="fab" id="openAddModal">+</button>
-
-<!-- Add / Edit Modal -->
-<div class="modal" id="addModal">
-  <div class="modal-body">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <h2 style="margin:0;font-size:18px" id="modalTitle">Add Expense</h2>
-      <button style="background:none;color:var(--muted);font-size:20px;height:auto;padding:0" id="closeAddModal">✕</button>
-    </div>
+<div id="mobile-frame">
+  <div class="notch"></div>
+  
+  <!-- MPIN Screen -->
+  <div id="mpinScreen" class="mpin-overlay" style="display:none">
+    <div style="font-size:36px;margin-bottom:8px">🔒</div>
+    <h2 style="margin:0;font-size:20px;font-weight:700;color:#2e1d65" id="mpinTitle">Enter MPIN</h2>
+    <p style="font-size:13px;color:var(--muted);margin:4px 0 0" id="mpinSub">Unlock Kanakku</p>
     
-    <input type="hidden" id="editId" value="">
-
-    <div class="row">
-      <div>
-        <label>Date</label>
-        <input type="date" id="date">
-      </div>
-      <div>
-        <label>Amount (₹)</label>
-        <input type="number" id="amount" min="1" step="1" placeholder="0">
-      </div>
+    <div class="pin-display">
+      <div class="pin-dot" id="dot1"></div>
+      <div class="pin-dot" id="dot2"></div>
+      <div class="pin-dot" id="dot3"></div>
+      <div class="pin-dot" id="dot4"></div>
     </div>
 
-    <div id="expenseFields">
-      <label>Category</label>
-      <select id="category"></select>
-      <div class="quick" id="quick"></div>
-
-      <label>Payment Method</label>
-      <div class="type">
-        <button type="button" id="cashBtn" class="active">Cash / UPI</button>
-        <button type="button" id="ccBtn">Credit Card</button>
-      </div>
-      <input type="hidden" id="payment" value="Cash / UPI / Debit">
+    <div class="keypad">
+      <button onclick="pressPin('1')">1</button>
+      <button onclick="pressPin('2')">2</button>
+      <button onclick="pressPin('3')">3</button>
+      <button onclick="pressPin('4')">4</button>
+      <button onclick="pressPin('5')">5</button>
+      <button onclick="pressPin('6')">6</button>
+      <button onclick="pressPin('7')">7</button>
+      <button onclick="pressPin('8')">8</button>
+      <button onclick="pressPin('9')">9</button>
+      <button onclick="clearPin()" style="font-size:14px;color:var(--muted)">CLR</button>
+      <button onclick="pressPin('0')">0</button>
+      <button onclick="delPin()" style="font-size:16px">⌫</button>
     </div>
-
-    <label>Note (Optional)</label>
-    <input id="note" placeholder="e.g. groceries, petrol">
-
-    <button class="primary" style="width:100%;margin-top:16px" id="addBtn">Save Expense</button>
   </div>
-</div>
 
-<nav class="bottom-nav">
-  <button class="nav-btn active" onclick="switchTab('tx', this)"><span>📊</span>Dashboard</button>
-  <button class="nav-btn" onclick="switchTab('budget', this)"><span>🎯</span>Budget</button>
-  <button class="nav-btn" onclick="switchTab('card', this)"><span>💳</span>Cards</button>
-</nav>
+  <header>
+    <div>
+      <h1>Kana<span>kku</span></h1>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="monthFilter" style="height:36px;width:auto;font-size:13px;border-radius:10px"></select>
+      <button class="danger" id="clearBtn">Reset</button>
+    </div>
+  </header>
+
+  <div class="app-scroll-area">
+    <!-- Single view 2-column grid layout for summary cards -->
+    <div class="summary-grid" id="summary"></div>
+
+    <div class="content" id="reportArea">
+      <!-- Tab 1: Dashboard -->
+      <div id="tab-tx" class="tab-content active">
+        <div class="panel">
+          <h2>Spending Breakdown</h2>
+          <div class="chart-container">
+            <canvas id="expenseChart"></canvas>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Recent Transactions</h2>
+          <div id="transactions"></div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Budget -->
+      <div id="tab-budget" class="tab-content">
+        <div class="panel">
+          <h2>Salary Allocations</h2>
+          <label>Monthly Salary (₹)</label>
+          <input type="number" id="salary" min="0" step="500" placeholder="e.g. 140000">
+          <div id="budgetProgress" style="margin-top:16px"></div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Credit Card -->
+      <div id="tab-card" class="tab-content">
+        <div class="panel">
+          <h2>Credit Card Summary</h2>
+          <div id="ccSummary"></div>
+          <label>Pay Bill</label>
+          <div class="row">
+            <input type="date" id="payDate">
+            <input type="number" id="payAmount" min="1" placeholder="Amount">
+          </div>
+          <button style="width:100%;margin-top:12px;background:rgba(251,146,60,0.12);color:#ea580c;border:1px solid rgba(251,146,60,0.25)" id="payBtn">Record Card Payment</button>
+        </div>
+      </div>
+
+      <!-- Tab 4: Settings & Data -->
+      <div id="tab-settings" class="tab-content">
+        <div class="panel">
+          <h2>Security & Security MPIN</h2>
+          <label>Recipients Email (Default)</label>
+          <input type="email" id="emailInput" placeholder="name@example.com">
+          
+          <label style="margin-top:16px">Security MPIN</label>
+          <div style="display:flex;gap:10px">
+            <button class="secondary" style="flex:1" id="setMpinBtn">Set New MPIN</button>
+            <button class="danger" style="height:46px" id="removeMpinBtn">Remove</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Export Reports</h2>
+          <p style="font-size:13px;color:var(--muted);margin-top:0">Send reports via email or download files.</p>
+          
+          <button class="export-btn" style="width:100%;margin-bottom:10px;background:rgba(124,77,255,0.12);color:var(--primary);border-color:rgba(124,77,255,0.25)" id="emailReportBtn">✉️ Send Monthly Report to Email</button>
+
+          <div class="export-grid">
+            <button class="export-btn" id="exportCsvBtn">📊 Export CSV</button>
+            <button class="export-btn" id="exportPdfBtn">📄 Export PDF</button>
+          </div>
+
+          <label style="margin-top:20px">Database Backup</label>
+          <button class="export-btn" style="width:100%;margin-bottom:10px" id="exportBtn">📥 Backup JSON</button>
+          <input type="file" id="importFile" accept=".json" style="padding:8px">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="fab" id="openAddModal">+</button>
+
+  <!-- Add / Edit Modal -->
+  <div class="modal" id="addModal">
+    <div class="modal-body">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h2 style="margin:0;font-size:18px" id="modalTitle">Add Expense</h2>
+        <button style="background:none;color:var(--muted);font-size:22px;height:auto;padding:0" id="closeAddModal">✕</button>
+      </div>
+      
+      <input type="hidden" id="editId" value="">
+
+      <div class="row">
+        <div>
+          <label>Date</label>
+          <input type="date" id="date">
+        </div>
+        <div>
+          <label>Amount (₹)</label>
+          <input type="number" id="amount" min="1" step="1" placeholder="0">
+        </div>
+      </div>
+
+      <div id="expenseFields">
+        <label>Category</label>
+        <select id="category"></select>
+        <div class="quick" id="quick"></div>
+
+        <label>Payment Method</label>
+        <div class="type">
+          <button type="button" id="cashBtn" class="active">Cash / UPI</button>
+          <button type="button" id="ccBtn">Credit Card</button>
+        </div>
+        <input type="hidden" id="payment" value="Cash / UPI / Debit">
+      </div>
+
+      <label>Note (Optional)</label>
+      <input id="note" placeholder="e.g. groceries, petrol">
+
+      <button class="primary" style="width:100%;margin-top:20px" id="addBtn">Save Expense</button>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="switchTab('tx', this)"><span>📊</span>Dashboard</button>
+    <button class="nav-btn" onclick="switchTab('budget', this)"><span>🎯</span>Budget</button>
+    <button class="nav-btn" onclick="switchTab('card', this)"><span>💳</span>Cards</button>
+    <button class="nav-btn" onclick="switchTab('settings', this)"><span>⚙️</span>Export</button>
+  </nav>
+</div>
 
 <script>
 const KEY='kanakku_v2_data';
 const DEFAULT_CATS=['House Expenses','Vegetables & Fruits','Groceries','Savings','Transport','School Fees','Medical','Shopping','Food & Snacks','Other'];
 const DEFAULT_ALLOC={'House Expenses':30,'Vegetables & Fruits':8,'Groceries':12,'Savings':20,'Transport':8,'School Fees':10,'Medical':5,'Shopping':2,'Food & Snacks':3,'Other':2};
 
-const CHART_COLORS = ['#2563eb', '#16a34a', '#ea580c', '#dc2626', '#8b5cf6', '#06b6d4', '#ec4899', '#f59e0b', '#64748b', '#10b981'];
+// Soft Lavender, Purple, Teal, and Pastel Accents inspired by the design palette
+const CHART_COLORS = ['#8b5cf6', '#4ade80', '#a78bfa', '#38bdf8', '#c084fc', '#22c55e', '#f472b6', '#fb923c', '#60a5fa', '#a855f7'];
 
-let data={salary:0,alloc:{...DEFAULT_ALLOC},tx:[]};
+let data={salary:0,mpin:'',userEmail:'',alloc:{...DEFAULT_ALLOC},tx:[]};
 let selectedMonth='';
 let pieChartInstance=null;
+
+let inputPin='';
+let mpinMode='unlock';
 
 function money(n){return '₹'+Math.round(Math.abs(n)).toLocaleString('en-IN')}
 function save(){localStorage.setItem(KEY,JSON.stringify(data))}
@@ -215,10 +494,72 @@ function setup(){
   load();
   document.getElementById('date').value=today();
   document.getElementById('payDate').value=today();
+  document.getElementById('emailInput').value=data.userEmail||'';
+
   setupCategories();
   setupMonths();
   setupEvents();
-  render();
+
+  if(data.mpin) {
+    showMpinScreen('unlock');
+  } else {
+    render();
+  }
+}
+
+function showMpinScreen(mode) {
+  mpinMode = mode;
+  inputPin = '';
+  updatePinDots();
+  const screen = document.getElementById('mpinScreen');
+  const title = document.getElementById('mpinTitle');
+  const sub = document.getElementById('mpinSub');
+
+  if(mode === 'unlock') {
+    title.innerText = 'Enter MPIN';
+    sub.innerText = 'Unlock Kanakku App';
+  } else {
+    title.innerText = 'Set 4-Digit MPIN';
+    sub.innerText = 'Create security PIN';
+  }
+  screen.style.display = 'flex';
+}
+
+function pressPin(n) {
+  if(inputPin.length < 4) {
+    inputPin += n;
+    updatePinDots();
+    if(inputPin.length === 4) {
+      setTimeout(verifyPin, 150);
+    }
+  }
+}
+
+function clearPin() { inputPin = ''; updatePinDots(); }
+function delPin() { inputPin = inputPin.slice(0, -1); updatePinDots(); }
+
+function updatePinDots() {
+  for(let i=1; i<=4; i++) {
+    document.getElementById(`dot${i}`).classList.toggle('filled', i <= inputPin.length);
+  }
+}
+
+function verifyPin() {
+  if(mpinMode === 'unlock') {
+    if(inputPin === data.mpin) {
+      document.getElementById('mpinScreen').style.display = 'none';
+      render();
+    } else {
+      alert('Incorrect MPIN! Try again.');
+      clearPin();
+    }
+  } else if(mpinMode === 'set') {
+    data.mpin = inputPin;
+    save();
+    document.getElementById('mpinScreen').style.display = 'none';
+    alert('MPIN configured successfully!');
+    render();
+  }
 }
 
 function switchTab(tabId, btn){
@@ -250,16 +591,28 @@ function setupMonths(){
 function setupEvents(){
   document.getElementById('monthFilter').onchange=e=>{selectedMonth=e.target.value;render()};
   document.getElementById('salary').onchange=e=>{data.salary=Number(e.target.value)||0;save();render()};
+  document.getElementById('emailInput').onchange=e=>{data.userEmail=e.target.value.trim();save()};
   document.getElementById('addBtn').onclick=saveExpense;
   document.getElementById('payBtn').onclick=addCardPayment;
   document.getElementById('clearBtn').onclick=()=>{
     if(confirm('Delete all saved data?')){
-      data={salary:0,alloc:{...DEFAULT_ALLOC},tx:[]};save();selectedMonth=currentMonth();setupMonths();render();
+      data={salary:0,mpin:'',userEmail:'',alloc:{...DEFAULT_ALLOC},tx:[]};save();selectedMonth=currentMonth();setupMonths();render();
     }
   };
   document.getElementById('cashBtn').onclick=()=>setPayment('Cash / UPI / Debit');
   document.getElementById('ccBtn').onclick=()=>setPayment('Credit Card');
   
+  document.getElementById('setMpinBtn').onclick=()=>showMpinScreen('set');
+  document.getElementById('removeMpinBtn').onclick=()=>{
+    if(confirm('Remove MPIN protection?')) { data.mpin=''; save(); alert('MPIN disabled.'); }
+  };
+
+  document.getElementById('exportBtn').onclick=exportData;
+  document.getElementById('importFile').onchange=importData;
+  document.getElementById('exportCsvBtn').onclick=exportCSV;
+  document.getElementById('exportPdfBtn').onclick=exportPDF;
+  document.getElementById('emailReportBtn').onclick=sendEmailReport;
+
   const modal = document.getElementById('addModal');
   document.getElementById('openAddModal').onclick=()=>{
     resetForm();
@@ -267,6 +620,96 @@ function setupEvents(){
     modal.classList.add('open');
   };
   document.getElementById('closeAddModal').onclick=()=>modal.classList.remove('open');
+}
+
+function sendEmailReport() {
+  const ex = monthExpenses();
+  const spent = ex.reduce((s,t)=>s+t.amount,0);
+  const cardSpend = ex.filter(t=>t.payment==='Credit Card').reduce((s,t)=>s+t.amount,0);
+  const cashSpend = spent - cardSpend;
+  
+  const recipient = data.userEmail || '';
+  const subject = encodeURIComponent(`Kanakku Financial Summary - ${monthLabel(selectedMonth)}`);
+  
+  let body = `Kanakku Expense Report (${monthLabel(selectedMonth)})\n\n`;
+  body += `Salary: ${money(data.salary)}\n`;
+  body += `Total Spent: ${money(spent)}\n`;
+  body += `Card Spend: ${money(cardSpend)}\n`;
+  body += `Cash / UPI Spend: ${money(cashSpend)}\n`;
+  body += `Remaining: ${money(Math.max(0, data.salary - spent))}\n\n`;
+
+  body += `--- Category Breakdown ---\n`;
+  const totals = {};
+  ex.forEach(t=>{ totals[t.category] = (totals[t.category]||0) + t.amount; });
+  Object.entries(totals).forEach(([cat, amt]) => {
+    body += `${cat}: ${money(amt)}\n`;
+  });
+
+  body += `\n--- Recent Transactions ---\n`;
+  ex.forEach(t => {
+    body += `${t.date} | ${t.category} | ${t.payment} | ${money(t.amount)} ${t.note?`(${t.note})`:''}\n`;
+  });
+
+  const mailtoUrl = `mailto:${recipient}?subject=${subject}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailtoUrl;
+}
+
+function exportCSV(){
+  const rows = [["Date", "Type", "Category", "Amount", "Payment Method", "Note"]];
+  data.tx.forEach(t => {
+    rows.push([t.date, t.kind, `"${t.category}"`, t.amount, `"${t.payment}"`, `"${t.note || ''}"`]);
+  });
+  const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `kanakku_report_${today()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+function exportPDF(){
+  const element = document.getElementById('reportArea');
+  const opt = {
+    margin:       0.5,
+    filename:     `kanakku_statement_${selectedMonth}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, backgroundColor: '#f3f2f8' },
+    jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+  };
+  html2pdf().set(opt).from(element).save();
+}
+
+function exportData(){
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+  const dlAnchorElem = document.createElement('a');
+  dlAnchorElem.setAttribute("href", dataStr);
+  dlAnchorElem.setAttribute("download", `kanakku_backup_${today()}.json`);
+  document.body.appendChild(dlAnchorElem);
+  dlAnchorElem.click();
+  dlAnchorElem.remove();
+}
+
+function importData(e){
+  const fileReader = new FileReader();
+  fileReader.onload = function(event) {
+    try {
+      const parsed = JSON.parse(event.target.result);
+      if(parsed && Array.isArray(parsed.tx)) {
+        data = parsed;
+        save();
+        setupMonths();
+        render();
+        alert('Data restored successfully!');
+      } else {
+        alert('Invalid JSON backup file.');
+      }
+    } catch(err) {
+      alert('Failed to parse backup file.');
+    }
+  };
+  if(e.target.files[0]) fileReader.readAsText(e.target.files[0]);
 }
 
 function setPayment(v){
@@ -376,11 +819,11 @@ function renderSummary(){
   const budget=data.salary;
   const remaining=Math.max(0,budget-spent);
   document.getElementById('summary').innerHTML=`
-    <div class="card"><div class="label">Salary</div><div class="value blue">${money(budget)}</div></div>
+    <div class="card"><div class="label">Salary</div><div class="value yellow">${money(budget)}</div></div>
     <div class="card"><div class="label">Total Spent</div><div class="value red">${money(spent)}</div></div>
     <div class="card"><div class="label">Card Spend</div><div class="value orange">${money(cardSpend)}</div></div>
     <div class="card"><div class="label">Cash / UPI</div><div class="value">${money(cashSpend)}</div></div>
-    <div class="card"><div class="label">Remaining</div><div class="value green">${money(remaining)}</div></div>`;
+    <div class="card card-full"><div class="label">Remaining</div><div class="value green">${money(remaining)}</div></div>`;
 }
 
 function renderChart(){
@@ -408,7 +851,8 @@ function renderChart(){
       labels: labels,
       datasets: [{
         data: values,
-        backgroundColor: CHART_COLORS.slice(0, labels.length)
+        backgroundColor: CHART_COLORS.slice(0, labels.length),
+        borderWidth: 0
       }]
     },
     options: {
@@ -417,7 +861,7 @@ function renderChart(){
       plugins: {
         legend: {
           position: 'bottom',
-          labels: { boxWidth: 12, font: { size: 11 } }
+          labels: { boxWidth: 12, font: { family: 'Outfit', size: 12 }, color: '#8b859e' }
         }
       }
     }
@@ -462,9 +906,9 @@ function renderCC(){
   const payments=data.tx.filter(t=>t.kind==='card_payment').reduce((s,t)=>s+t.amount,0);
   const outstanding=Math.max(0,purchases-payments);
   document.getElementById('ccSummary').innerHTML=`
-    <div style="display:flex;justify-content:space-between;padding:6px 0"><span>Total Card Purchases</span><b>${money(purchases)}</b></div>
-    <div style="display:flex;justify-content:space-between;padding:6px 0"><span>Total Bill Payments</span><b>${money(payments)}</b></div>
-    <div style="display:flex;justify-content:space-between;padding:6px 0"><span>Outstanding Due</span><b class="orange">${money(outstanding)}</b></div>`;
+    <div style="display:flex;justify-content:space-between;padding:8px 0"><span>Total Card Purchases</span><b>${money(purchases)}</b></div>
+    <div style="display:flex;justify-content:space-between;padding:8px 0"><span>Total Bill Payments</span><b>${money(payments)}</b></div>
+    <div style="display:flex;justify-content:space-between;padding:8px 0"><span>Outstanding Due</span><b class="orange">${money(outstanding)}</b></div>`;
 }
 
 setup();
