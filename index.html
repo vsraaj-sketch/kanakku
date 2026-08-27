@@ -5,16 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Kanakku - Mobile App</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#b49cf8">
+<meta name="theme-color" content="#d8ccff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-<!-- Google Fonts: Outfit -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-<!-- External Libraries -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
@@ -39,27 +37,24 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-/* Mobile Device Container Frame */
+/* Fullscreen Viewport Setup */
 body {
   margin: 0;
-  background: #e2dfed;
+  padding: 0;
+  background: var(--bg);
   font-family: 'Outfit', -apple-system, sans-serif;
   color: var(--text);
   min-height: 100vh;
   display: flex;
   justify-content: center;
-  align-items: center;
-  padding: 20px 0;
+  align-items: stretch;
 }
 
 #mobile-frame {
   width: 100%;
-  max-width: 410px;
-  height: 840px;
+  max-width: 480px; /* Comfortably scales on mobile and desktop web */
+  min-height: 100vh;
   background: var(--bg);
-  border-radius: 44px;
-  border: 11px solid #1e1b2e;
-  box-shadow: 0 25px 60px rgba(30, 27, 46, 0.25), 0 0 0 2px rgba(167, 139, 250, 0.2);
   position: relative;
   overflow: hidden;
   display: flex;
@@ -79,20 +74,6 @@ body {
   pointer-events: none;
 }
 
-/* Device Camera Notch */
-.notch {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 130px;
-  height: 24px;
-  background: #1e1b2e;
-  border-bottom-left-radius: 14px;
-  border-bottom-right-radius: 14px;
-  z-index: 150;
-}
-
 /* App Header & Body Scrolling Structure */
 header { 
   position: sticky; 
@@ -101,7 +82,7 @@ header {
   backdrop-filter: blur(16px); 
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid rgba(140, 115, 230, 0.15); 
-  padding: 34px 18px 14px 18px; 
+  padding: 16px 18px 14px 18px; 
   display: flex; 
   justify-content: space-between; 
   align-items: center; 
@@ -209,16 +190,16 @@ label { display: block; font-size: 12px; color: var(--muted); font-weight: 600; 
 .export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
 .export-btn { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; font-weight: 600; background: rgba(124, 77, 255, 0.05); color: var(--primary); border: 1px solid rgba(124, 77, 255, 0.18); }
 
-/* Bottom Navigation inside Phone Frame */
-.bottom-nav { position: absolute; bottom: 0; left: 0; right: 0; height: 65px; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--card-border); display: flex; justify-content: space-around; z-index: 100; border-bottom-left-radius: 32px; border-bottom-right-radius: 32px; }
+/* Bottom Navigation */
+.bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 65px; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--card-border); display: flex; justify-content: space-around; z-index: 100; }
 .nav-btn { background: none; border: 0; color: var(--muted); font-size: 11px; font-weight: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; flex: 1; }
 .nav-btn.active { color: var(--primary); font-weight: 700; }
 
-/* Floating Action Button inside Frame */
+/* Floating Action Button */
 .fab { 
-  position: absolute; 
+  position: fixed; 
   bottom: 75px; 
-  right: 18px; 
+  right: calc(50% - 220px); 
   width: 54px; 
   height: 54px; 
   border-radius: 27px; 
@@ -233,14 +214,18 @@ label { display: block; font-size: 12px; color: var(--muted); font-weight: 600; 
   font-weight: bold; 
 }
 
-/* Modal View inside Frame */
-.modal { position: absolute; inset: 0; background: rgba(30, 27, 46, 0.5); display: none; align-items: flex-end; z-index: 200; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-radius: 32px; }
+@media (max-width: 480px) {
+  .fab { right: 18px; }
+}
+
+/* Modal View */
+.modal { position: fixed; inset: 0; background: rgba(30, 27, 46, 0.5); display: none; align-items: flex-end; justify-content: center; z-index: 200; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .modal.open { display: flex; }
-.modal-body { background: #ffffff; border: 1px solid var(--card-border); width: 100%; border-radius: 24px 24px 0 0; padding: 22px; max-height: 85vh; overflow-y: auto; color: var(--text); box-shadow: 0 -10px 40px rgba(124, 77, 255, 0.15); }
+.modal-body { background: #ffffff; border: 1px solid var(--card-border); width: 100%; max-width: 480px; border-radius: 24px 24px 0 0; padding: 22px; max-height: 85vh; overflow-y: auto; color: var(--text); box-shadow: 0 -10px 40px rgba(124, 77, 255, 0.15); }
 
 /* MPIN Overlay Screens */
 .mpin-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: linear-gradient(180deg, #d8ccff 0%, #f3f2f8 60%);
   z-index: 300;
@@ -290,9 +275,6 @@ label { display: block; font-size: 12px; color: var(--muted); font-weight: 600; 
 <body>
 
 <div id="mobile-frame">
-  <div class="notch"></div>
-  
-  <!-- MPIN Screen -->
   <div id="mpinScreen" class="mpin-overlay" style="display:none">
     <div style="font-size:36px;margin-bottom:8px">🔒</div>
     <h2 style="margin:0;font-size:20px;font-weight:700;color:#2e1d65" id="mpinTitle">Enter MPIN</h2>
@@ -332,11 +314,9 @@ label { display: block; font-size: 12px; color: var(--muted); font-weight: 600; 
   </header>
 
   <div class="app-scroll-area">
-    <!-- Single view 2-column grid layout for summary cards -->
     <div class="summary-grid" id="summary"></div>
 
     <div class="content" id="reportArea">
-      <!-- Tab 1: Dashboard -->
       <div id="tab-tx" class="tab-content active">
         <div class="panel">
           <h2>Spending Breakdown</h2>
@@ -351,7 +331,6 @@ label { display: block; font-size: 12px; color: var(--muted); font-weight: 600; 
         </div>
       </div>
 
-      <!-- Tab 2: Budget -->
       <div id="tab-budget" class="tab-content">
         <div class="panel">
           <h2>Salary Allocations</h2>
@@ -361,7 +340,6 @@ label { display: block; font-size: 12px; color: var(--muted); font-weight: 600; 
         </div>
       </div>
 
-      <!-- Tab 3: Credit Card -->
       <div id="tab-card" class="tab-content">
         <div class="panel">
           <h2>Credit Card Summary</h2>
@@ -375,7 +353,6 @@ label { display: block; font-size: 12px; color: var(--muted); font-weight: 600; 
         </div>
       </div>
 
-      <!-- Tab 4: Settings & Data -->
       <div id="tab-settings" class="tab-content">
         <div class="panel">
           <h2>Security & Security MPIN</h2>
@@ -410,7 +387,6 @@ label { display: block; font-size: 12px; color: var(--muted); font-weight: 600; 
 
   <button class="fab" id="openAddModal">+</button>
 
-  <!-- Add / Edit Modal -->
   <div class="modal" id="addModal">
     <div class="modal-body">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
@@ -464,7 +440,7 @@ const KEY='kanakku_v2_data';
 const DEFAULT_CATS=['House Expenses','Vegetables & Fruits','Groceries','Savings','Transport','School Fees','Medical','Shopping','Food & Snacks','Other'];
 const DEFAULT_ALLOC={'House Expenses':30,'Vegetables & Fruits':8,'Groceries':12,'Savings':20,'Transport':8,'School Fees':10,'Medical':5,'Shopping':2,'Food & Snacks':3,'Other':2};
 
-// Soft Lavender, Purple, Teal, and Pastel Accents inspired by the design palette
+// Soft Lavender, Purple, Teal, and Pastel Accents
 const CHART_COLORS = ['#8b5cf6', '#4ade80', '#a78bfa', '#38bdf8', '#c084fc', '#22c55e', '#f472b6', '#fb923c', '#60a5fa', '#a855f7'];
 
 let data={salary:0,mpin:'',userEmail:'',alloc:{...DEFAULT_ALLOC},tx:[]};
