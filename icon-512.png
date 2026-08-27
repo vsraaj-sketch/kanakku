@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!-- saved from url=(0100)file:///C:/Users/svelusamy8/OneDrive%20-%20DXC%20Production/Downloads/gemini-code-1787843585418.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Kanakku Icon - Concept 1</title>
+<style>
+  body { display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f1f5f9; font-family: sans-serif; }
+  .card { text-align: center; background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+</style>
+</head>
+<body>
+<div class="card">
+  <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+    <defs>
+      <lineargradient id="bgGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#1e293b"></stop>
+        <stop offset="100%" stop-color="#0f172a"></stop>
+      </lineargradient>
+      <lineargradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#3b82f6"></stop>
+        <stop offset="100%" stop-color="#2563eb"></stop>
+      </lineargradient>
+    </defs>
+    <!-- Dark Premium Background -->
+    <rect width="512" height="512" rx="115" ry="115" fill="url(#bgGrad1)"></rect>
+    
+    <!-- Accent Ring -->
+    <circle cx="256" cy="256" r="180" fill="none" stroke="url(#accentGrad)" stroke-width="12" opacity="0.4"></circle>
+    
+    <!-- Tamil 'க்' in Red-Orange Accent -->
+    <text x="256" y="310" font-family="&#39;Mukta Malar&#39;, &#39;Latha&#39;, &#39;Tamil Sangam MN&#39;, sans-serif" font-size="220" font-weight="bold" fill="#ef4444" text-anchor="middle">க்</text>
+    
+    <!-- Subtitle text -->
+    <text x="256" y="420" font-family="-apple-system, sans-serif" font-size="36" font-weight="700" fill="#94a3b8" letter-spacing="4" text-anchor="middle">KANAKKU</text>
+  </svg>
+  <p style="color:#64748b;font-size:14px;margin-top:12px">Right-click icon to save as PNG</p>
+</div>
+
+</body></html>
