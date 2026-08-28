@@ -697,243 +697,435 @@ function checkBudgetThreshold(category, targetMonth) {
 function parseAndSaveSms() {
   const text = document.getElementById('smsText').value.trim();
   if(!text) { alert('Please paste an SMS text first.'); return; }
+  
+  // 1. Extract Amount
   const amtRegex = /(?:Rs\.?|INR|₹)\s*([\d,]+\.?\d*)/i;
   const amtMatch = text.match(amtRegex);
   if(!amtMatch) { alert('Could not detect a valid amount in the SMS.'); return; }
   const amount = parseFloat(amtMatch[1].replace(/,/g, ''));
 
+  // 2. Extract Date (Matches formats like DD/MM/YY or DD-MM-YYYY)
+  let txDate = today();
+  const dateRegex = /(?:on\s*)?(\d{2})[\/\-](\d{2})[\/\-](\d{2,4})/i;
+  const dateMatch = text.match(dateRegex);
+  if (dateMatch) {
+    let day = dateMatch[1];
+    let month = dateMatch[2];
+    let year = dateMatch[3];
+    if (year.length === 2) year = '20' + year;
+    txDate = `${year}-${month}-${day}`;
+  }
+
+  // 3. Determine Payment Method
   let payment = 'Cash / UPI / Debit';
   if(/credit card|cc\b|card ending/i.test(text)) { payment = 'Credit Card'; }
 
+  // 4. Extract Merchant / Recipient
   let merchant = 'Other';
-  const atMatch = text.match(/(?:at|to|info\.?:|merchant:)\s*([A-Za-z0-9\s\*]+?)(?:\s+on|\s+ref|\s+avl|\s+avail|\.|$)/i);
+  const toMatch = text.match(/(?:to|at|info\.?:|merchant:)\s*([A-Za-z0-9\s\*]+?)(?:\s+on|\s+ref|\s+avl|\s+avail|\.|$)/i);
   let note = 'Imported from SMS';
-  if(atMatch && atMatch[1].trim().length > 1) {
-    merchant = atMatch[1].trim();
-    note = `At ${merchant}`;
+  if(toMatch && toMatch[1].trim().length > 1) {
+    merchant = toMatch[1].trim();
+    note = `To ${merchant}`;
   }
 
+  // 5. Intelligent Categorization
   let category = '📝 Other';
   const lower = (merchant + ' ' + text).toLowerCase();
-  if(/swiggy|zomato|restaurant|cafe|hotel|food|mcdonald|kfc|starbucks|dominos/i.test(lower)) category = '🍔 Food & Dining';
+  
+  if(/pareshith|friend|transfer|upi|self/i.test(lower) && !/swiggy|zomato|amazon|flipkart|dmart|blinkit|uber|ola/i.test(lower)) {
+    category = '📝 Other'; // Direct transfers or peer names map cleanly to Other/Transfer unless specified
+  } else if(/swiggy|zomato|restaurant|cafe|hotel|food|mcdonald|kfc|starbucks|dominos/i.test(lower)) category = '🍔 Food & Dining';
   else if(/grocery|supermarket|dmart|blinkit|instamart|bigbasket|fresh/i.test(lower)) category = '🛒 Groceries';
   else if(/vegetable|fruit|sabzi/i.test(lower)) category = '🥦 Veggies & Fruits';
   else if(/uber|ola|rapido|metro|fuel|petrol|shell|hpcl|bpcl|iocl/i.test(lower)) category = '🚗 Transport & Fuel';
   else if(/hospital|pharmacy|apollo|medplus|clinic|dr\b|doctor/i.test(lower)) category = '🏥 Medical & Health';
   else if(/amazon|flipkart|myntra|zara|h&m|shopping/i.test(lower)) category = '🛍️ Shopping';
-  else if(/school|college|tuition|fees|education/i.test(lower)) category = '🎓 Education';
-  else if(/house|rent|maintenance/i.test(lower)) category = '🏠 House & Rent';
-  else if(/electricity|eb bill|water|jio|airtel|vi|recharge|wifi|broadband|bill/i.test(lower)) category = '📱 Bills & Utilities';
-  else if(/movie|netflix|prime|hotstar|cinema|spotify/i.test(lower)) category = '🎬 Entertainment';
-  else if(/salon|spa|hair|beauty/i.test(lower)) category = '💇‍♀️ Personal Care';
-  else if(/flight|train|irctc|makemytrip|goibibo|hotel/i.test(lower)) category = '✈️ Travel';
+  else if(/school|college|fee|udemy|coursera/i.test(lower)) category = '🎓 Education';
+  else if(/movie|netflix|prime|hotstar|spotify|game/i.test(lower)) category = '🎬 Entertainment';
+  else if(/salon|spa|beauty|hair/i.test(lower)) category = '💇‍♀️ Personal Care';
+  else if(/flight|hotel|airbnb|makemytrip|irctc/i.test(lower)) category = '✈️ Travel';
+  else if(/rent|maintenance|eb bill|electricity|water/i.test(lower)) category = '🏠 House & Rent';
 
-  const txDate = today();
-  data.tx.push({ id: Date.now(), kind: 'expense', date: txDate, amount: amount, category: category, payment: payment, note: note });
-  save(); selectedMonth = currentMonth(); setupMonths(); render();
-  checkBudgetThreshold(category, monthKey(txDate));
+  let chosenPillar = 'Wants (30%)';
+  Object.entries(CATEGORY_PILLARS).forEach(([pillarName, pObj]) => {
+    if (Object.keys(pObj.cats).includes(category)) chosenPillar = pillarName;
+  });
 
+  const tx = {
+    id: 'tx_' + Date.now() + Math.random().toString(36).substr(2, 5),
+    date: txDate,
+    amount: amount,
+    kind: 'expense',
+    category: category,
+    pillar: chosenPillar,
+    payment: payment,
+    note: note
+  };
+
+  data.tx.unshift(tx);
+  save();
+  setupMonths();
   document.getElementById('smsText').value = '';
   document.getElementById('smsModal').classList.remove('open');
+  
+  selectedMonth = monthKey(txDate);
+  document.getElementById('monthFilter').value = selectedMonth;
+  render();
+  checkBudgetThreshold(category, selectedMonth);
+  alert(`Successfully parsed & added: ${money(amount)} for ${category} on ${txDate}`);
 }
 
-function sendEmailReport() {}
-function exportCSV(){}
-function exportPDF(){}
-function exportData(){}
-function importData(e){}
-
-function setPayment(v){
-  document.getElementById('payment').value=v;
-  document.getElementById('cashBtn').classList.toggle('active',v!=='Credit Card');
-  document.getElementById('ccBtn').classList.toggle('active',v==='Credit Card');
+function setPayment(type) {
+  document.getElementById('payment').value = type;
+  if(type === 'Credit Card') {
+    document.getElementById('ccBtn').classList.add('active');
+    document.getElementById('cashBtn').classList.remove('active');
+  } else {
+    document.getElementById('cashBtn').classList.add('active');
+    document.getElementById('ccBtn').classList.remove('active');
+  }
 }
 
-function resetForm(){
-  document.getElementById('editId').value='';
-  document.getElementById('date').value=today();
-  document.getElementById('amount').value='';
-  document.getElementById('note').value='';
-  document.getElementById('expenseFields').style.display='block';
+function resetForm() {
+  document.getElementById('editId').value = '';
+  document.getElementById('date').value = today();
+  document.getElementById('amount').value = '';
+  document.getElementById('note').value = '';
   setPayment('Cash / UPI / Debit');
+  document.getElementById('modalTitle').innerText = 'Add Expense';
 }
 
-function saveExpense(){
+function saveExpense() {
   const editId = document.getElementById('editId').value;
   const date = document.getElementById('date').value;
   const amount = Number(document.getElementById('amount').value);
+  const category = document.getElementById('category').value;
+  const payment = document.getElementById('payment').value;
   const note = document.getElementById('note').value.trim();
-  
-  if(!date||amount<=0){alert('Please enter date and amount.');return}
 
-  let category = '';
-  if(editId){
-    const index = data.tx.findIndex(t => t.id == editId);
-    if(index !== -1){
-      const tx = data.tx[index];
-      tx.date = date; tx.amount = amount; tx.note = note;
-      if(tx.kind === 'expense'){
-        tx.category = document.getElementById('category').value;
-        tx.payment = document.getElementById('payment').value;
-      }
-      category = tx.category;
+  if(!date || !amount || amount <= 0) {
+    alert('Please enter a valid date and amount.');
+    return;
+  }
+
+  let chosenPillar = 'Wants (30%)';
+  Object.entries(CATEGORY_PILLARS).forEach(([pillarName, pObj]) => {
+    if (Object.keys(pObj.cats).includes(category)) chosenPillar = pillarName;
+  });
+
+  if(editId) {
+    const item = data.tx.find(t => t.id === editId);
+    if(item) {
+      item.date = date;
+      item.amount = amount;
+      item.category = category;
+      item.pillar = chosenPillar;
+      item.payment = payment;
+      item.note = note;
     }
   } else {
-    category = document.getElementById('category').value;
-    const payment = document.getElementById('payment').value;
-    data.tx.push({id:Date.now(),kind:'expense',date,amount,category,payment,note});
+    const tx = {
+      id: 'tx_' + Date.now() + Math.random().toString(36).substr(2, 5),
+      date,
+      amount,
+      kind: 'expense',
+      category,
+      pillar: chosenPillar,
+      payment,
+      note
+    };
+    data.tx.unshift(tx);
   }
-  save(); selectedMonth=monthKey(date); setupMonths(); render();
-  checkBudgetThreshold(category, monthKey(date));
 
-  resetForm(); document.getElementById('addModal').classList.remove('open');
+  save();
+  setupMonths();
+  document.getElementById('addModal').classList.remove('open');
+  selectedMonth = monthKey(date);
+  document.getElementById('monthFilter').value = selectedMonth;
+  render();
+  checkBudgetThreshold(category, selectedMonth);
 }
 
-function editTx(id){
-  const tx = data.tx.find(t => t.id === id);
-  if(!tx) return;
-  document.getElementById('editId').value = tx.id;
-  document.getElementById('date').value = tx.date;
-  document.getElementById('amount').value = tx.amount;
-  document.getElementById('note').value = tx.note || '';
-
-  if(tx.kind === 'expense'){
-    document.getElementById('modalTitle').innerText = 'Edit Expense';
-    document.getElementById('expenseFields').style.display = 'block';
-    document.getElementById('category').value = tx.category;
-    setPayment(tx.payment);
-  } else {
-    document.getElementById('modalTitle').innerText = 'Edit Card Payment';
-    document.getElementById('expenseFields').style.display = 'none';
-  }
+function editTransaction(id) {
+  const item = data.tx.find(t => t.id === id);
+  if(!item) return;
+  document.getElementById('editId').value = item.id;
+  document.getElementById('date').value = item.date;
+  document.getElementById('amount').value = item.amount;
+  document.getElementById('category').value = item.category;
+  setPayment(item.payment || 'Cash / UPI / Debit');
+  document.getElementById('note').value = item.note || '';
+  document.getElementById('modalTitle').innerText = 'Edit Expense';
   document.getElementById('addModal').classList.add('open');
 }
 
-function addCardPayment(){
-  const date=document.getElementById('payDate').value;
-  const amount=Number(document.getElementById('payAmount').value);
-  if(!date||amount<=0){alert('Please enter payment date and amount.');return}
-  data.tx.push({id:Date.now(),kind:'card_payment',date,amount,category:'💳 Credit Card Bill',payment:'Bank / UPI',note:'Card bill payment'});
-  save(); selectedMonth=monthKey(date); setupMonths(); render();
-  document.getElementById('payAmount').value='';
-}
-
-function removeTx(id){
-  if(confirm('Delete this transaction?')){
-    data.tx=data.tx.filter(t=>t.id!==id);
-    save(); render();
+function deleteTransaction(id) {
+  if(confirm('Delete this transaction?')) {
+    data.tx = data.tx.filter(t => t.id !== id);
+    save();
+    setupMonths();
+    render();
   }
 }
 
-function selectedTx(){return data.tx.filter(t=>monthKey(t.date)===selectedMonth)}
-function monthExpenses(){return selectedTx().filter(t=>t.kind==='expense')}
-
-function render(){
-  document.getElementById('salary').value=data.salary||'';
-  renderSummary(); renderChart(); renderBudget(); renderTransactions(); renderCC();
+function addCardPayment() {
+  const date = document.getElementById('payDate').value;
+  const amount = Number(document.getElementById('payAmount').value);
+  if(!date || !amount || amount <= 0) {
+    alert('Enter valid date and card payment amount.');
+    return;
+  }
+  const tx = {
+    id: 'tx_' + Date.now() + Math.random().toString(36).substr(2, 5),
+    date,
+    amount,
+    kind: 'cc_payment',
+    category: '💳 Credit Card Bill Payment',
+    pillar: 'Savings & Investments (20%)',
+    payment: 'Bank Transfer',
+    note: 'Credit Card Bill Settlement'
+  };
+  data.tx.unshift(tx);
+  save();
+  setupMonths();
+  document.getElementById('payAmount').value = '';
+  render();
+  alert('Credit card payment recorded successfully!');
 }
 
-function renderSummary(){
-  const ex=monthExpenses();
-  const spent=ex.reduce((s,t)=>s+t.amount,0);
-  const cardSpend=ex.filter(t=>t.payment==='Credit Card').reduce((s,t)=>s+t.amount,0);
-  const cashSpend=spent-cardSpend;
-  const budget=data.salary;
-  const remaining=Math.max(0,budget-spent);
-  document.getElementById('summary').innerHTML=`
-    <div class="card"><div class="label">Salary</div><div class="value yellow">${money(budget)}</div></div>
-    <div class="card"><div class="label">Total Spent</div><div class="value red">${money(spent)}</div></div>
-    <div class="card"><div class="label">Card Spend</div><div class="value orange">${money(cardSpend)}</div></div>
-    <div class="card"><div class="label">Cash / UPI</div><div class="value">${money(cashSpend)}</div></div>
-    <div class="card card-full"><div class="label">Remaining</div><div class="value green">${money(remaining)}</div></div>`;
+function render() {
+  document.getElementById('salary').value = data.salary || '';
+  const txs = data.tx.filter(t => monthKey(t.date) === selectedMonth);
+  const totalExpense = txs.filter(t => t.kind === 'expense').reduce((sum, t) => sum + t.amount, 0);
+
+  const ccPending = data.tx
+    .filter(t => t.payment === 'Credit Card' && t.kind === 'expense')
+    .reduce((sum, t) => sum + t.amount, 0) - data.tx
+    .filter(t => t.kind === 'cc_payment')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const savingsBal = (data.salary || 0) - totalExpense;
+
+  // Summary Grid Cards
+  document.getElementById('summary').innerHTML = `
+    <div class="card card-full">
+      <div>
+        <div class="label">Monthly Salary</div>
+        <div class="value">${money(data.salary)}</div>
+      </div>
+      <button class="secondary" style="height:36px;font-size:12px;padding:0 12px" onclick="switchTab('budget', document.querySelectorAll('.nav-btn')[1])">Update</button>
+    </div>
+    <div class="card">
+      <div class="label">Total Spent</div>
+      <div class="value red">${money(totalExpense)}</div>
+    </div>
+    <div class="card">
+      <div class="label">Net Savings</div>
+      <div class="value ${savingsBal >= 0 ? 'green' : 'red'}">${money(savingsBal)}</div>
+    </div>
+  `;
+
+  // Render Transactions List
+  const txContainer = document.getElementById('transactions');
+  if(txs.length === 0) {
+    txContainer.innerHTML = `<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">No transactions recorded for ${monthLabel(selectedMonth)}.</div>`;
+  } else {
+    txContainer.innerHTML = txs.map(t => `
+      <div class="tx-item">
+        <div class="tx-info">
+          <div class="tx-cat">${t.category}</div>
+          <div class="tx-sub">${t.date} • ${t.payment} ${t.note ? '• ' + t.note : ''}</div>
+        </div>
+        <div class="tx-actions">
+          <div class="tx-amt ${t.kind === 'cc_payment' ? 'payment' : 'expense'}">
+            ${t.kind === 'cc_payment' ? '+' : '-'}${money(t.amount)}
+          </div>
+          ${t.kind !== 'cc_payment' ? `<button class="btn-icon" onclick="editTransaction('${t.id}')">✏️</button>` : ''}
+          <button class="btn-icon" onclick="deleteTransaction('${t.id}')">🗑️</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Render Chart
+  renderChart(txs);
+
+  // Render 50/30/20 Budget Breakdown
+  renderBudgetRules(txs);
+
+  // Render Credit Card Summary Tab
+  renderCreditCardTab(ccPending);
 }
 
-function renderChart(){
-  const ex=monthExpenses();
-  const totals={};
-  ex.forEach(t=>{totals[t.category]=(totals[t.category]||0)+t.amount});
-  const labels=Object.keys(totals);
-  const values=Object.values(totals);
-  const ctx=document.getElementById('expenseChart').getContext('2d');
-  
-  if(pieChartInstance){ pieChartInstance.destroy(); }
-  if(labels.length === 0){ ctx.clearRect(0, 0, 300, 300); return; }
+function renderChart(txs) {
+  const ctx = document.getElementById('expenseChart').getContext('2d');
+  const catMap = {};
+  txs.filter(t => t.kind === 'expense').forEach(t => {
+    catMap[t.category] = (catMap[t.category] || 0) + t.amount;
+  });
+
+  const labels = Object.keys(catMap);
+  const values = Object.values(catMap);
+
+  if(pieChartInstance) { pieChartInstance.destroy(); }
+
+  if(labels.length === 0) {
+    pieChartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels: ['No Data'], datasets: [{ data: [1], backgroundColor: ['#f3e8ff'] }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+    return;
+  }
 
   pieChartInstance = new Chart(ctx, {
-    type: 'pie',
+    type: 'doughnut',
     data: {
       labels: labels,
-      datasets: [{ data: values, backgroundColor: CHART_COLORS.slice(0, labels.length), borderWidth: 0 }]
+      datasets: [{
+        data: values,
+        backgroundColor: CHART_COLORS.slice(0, labels.length),
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { family: 'Outfit', size: 12 }, color: '#7b7890' } } }
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { family: 'Outfit', size: 11 } } }
+      },
+      cutout: '65%'
     }
   });
 }
 
-function renderBudget(){
-  const ex=monthExpenses();
+function renderBudgetRules(txs) {
+  const container = document.getElementById('budgetProgress');
+  const salary = data.salary || 0;
+
   let html = '';
+  Object.entries(CATEGORY_PILLARS).forEach(([pillarName, pObj]) => {
+    const targetAmt = salary * (pObj.targetPct / 100);
+    const catKeys = Object.keys(pObj.cats);
+    const spentAmt = txs.filter(t => t.kind === 'expense' && catKeys.includes(t.category)).reduce((sum, t) => sum + t.amount, 0);
+    const targetPct = pObj.targetPct;
+    const isOver = spentAmt > targetAmt && targetAmt > 0;
+    const pillarPct = targetAmt > 0 ? Math.min(Math.round((spentAmt / targetAmt) * 100), 100) : 0;
 
-  Object.entries(CATEGORY_PILLARS).forEach(([pillarName, pillarInfo]) => {
-    let pillarSpent = 0;
-    let pillarBudget = data.salary * (pillarInfo.targetPct / 100);
+    html += `
+      <div class="pillar-header ${pObj.type}">
+        <span>${pillarName}</span>
+        <span>${money(spentAmt)} / ${money(targetAmt)}</span>
+      </div>
+    `;
 
-    let rowsHtml = '';
-    Object.keys(pillarInfo.cats).forEach(cat => {
-      const pct = data.alloc[cat] || 0;
-      const budget = data.salary * (pct / 100);
-      const spent = ex.filter(t => t.category === cat).reduce((s, t) => s + t.amount, 0);
-      pillarSpent += spent;
-      const used = budget ? spent / budget * 100 : 0;
+    catKeys.forEach(cat => {
+      const catPctAlloc = data.alloc[cat];
+      const catTarget = salary * (catPctAlloc / 100);
+      const catSpent = txs.filter(t => t.kind === 'expense' && t.category === cat).reduce((sum, t) => sum + t.amount, 0);
+      const catPct = catTarget > 0 ? Math.min(Math.round((catSpent / catTarget) * 100), 100) : 0;
+      const catOver = catSpent > catTarget && catTarget > 0;
 
-      rowsHtml += `<div class="budget-row">
-        <div class="budget-head"><b>${cat} (${pct}%)</b><span>${money(spent)} / ${money(budget)}</span></div>
-        <div class="bar"><div class="fill ${used>100?'over':''}" style="width:${Math.min(100,used)}%"></div></div>
-      </div>`;
+      html += `
+        <div class="budget-row">
+          <div class="budget-head">
+            <span>${cat}</span>
+            <span class="${catOver ? 'red' : ''}">${money(catSpent)} / ${money(catTarget)} (${catPctAlloc}%)</span>
+          </div>
+          <div class="bar"><div class="fill ${catOver ? 'over' : ''}" style="width: ${catPct}%"></div></div>
+        </div>
+      `;
     });
-
-    html += `<div class="pillar-header ${pillarInfo.type}">
-      <span>${pillarName}</span>
-      <span>Spent: ${money(pillarSpent)} / ${money(pillarBudget)}</span>
-    </div>${rowsHtml}`;
   });
 
-  document.getElementById('budgetProgress').innerHTML = html;
+  container.innerHTML = html;
 }
 
-function renderTransactions(){
-  const rows=[...selectedTx()].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
-  const body=document.getElementById('transactions');
-  if(!rows.length){body.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted)">No transactions recorded.</div>';return}
-  body.innerHTML=rows.map(t=>{
-    const isPay=t.kind==='card_payment';
-    return `<div class="tx-item">
-      <div class="tx-info">
-        <div class="tx-cat">${t.category}</div>
-        <div class="tx-sub">${t.date} · ${t.payment} ${t.note?`· ${t.note}`:''}</div>
-      </div>
-      <div class="tx-actions">
-        <div class="tx-amt ${isPay?'payment':'expense'}">${isPay?'−':'−'}${money(t.amount)}</div>
-        <button class="btn-icon" onclick="editTx(${t.id})">✏️</button>
-        <button class="btn-icon" onclick="removeTx(${t.id})">✕</button>
-      </div>
-    </div>`;
-  }).join('');
+function renderCreditCardTab(pendingAmt) {
+  const container = document.getElementById('ccSummary');
+  container.innerHTML = `
+    <div style="background: linear-gradient(135deg, #fef3c7, #fed7aa); border-radius: 16px; padding: 18px; color: #78350f; margin-bottom: 16px;">
+      <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Pending Card Dues</div>
+      <div style="font-size: 26px; font-weight: 800; margin-top: 4px;" class="orange">${money(pendingAmt)}</div>
+      <div style="font-size: 12px; opacity: 0.85; margin-top: 4px;">Total unpaid Credit Card expenses across all months.</div>
+    </div>
+  `;
 }
 
-function renderCC(){
-  const purchases=data.tx.filter(t=>t.kind==='expense'&&t.payment==='Credit Card').reduce((s,t)=>s+t.amount,0);
-  const payments=data.tx.filter(t=>t.kind==='card_payment').reduce((s,t)=>s+t.amount,0);
-  const outstanding=Math.max(0,purchases-payments);
-  document.getElementById('ccSummary').innerHTML=`
-    <div style="display:flex;justify-content:space-between;padding:8px 0"><span>Total Card Purchases</span><b>${money(purchases)}</b></div>
-    <div style="display:flex;justify-content:space-between;padding:8px 0"><span>Total Bill Payments</span><b>${money(payments)}</b></div>
-    <div style="display:flex;justify-content:space-between;padding:8px 0"><span>Outstanding Due</span><b class="orange">${money(outstanding)}</b></div>`;
+function exportData() {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `kanakku_backup_${today()}.json`;
+  a.click();
 }
 
-setup();
+function importData(e) {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      const parsed = JSON.parse(evt.target.result);
+      if(parsed && Array.isArray(parsed.tx)) {
+        data = parsed;
+        save();
+        setupMonths();
+        render();
+        alert('Data restored successfully!');
+      } else {
+        alert('Invalid backup file format.');
+      }
+    } catch(err) {
+      alert('Failed to parse JSON file.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function exportCSV() {
+  const txs = data.tx;
+  if(txs.length === 0) { alert('No transactions to export.'); return; }
+  let csv = 'ID,Date,Kind,Category,Pillar,Payment,Amount,Note\n';
+  txs.forEach(t => {
+    csv += `"${t.id}","${t.date}","${t.kind}","${t.category}","${t.pillar || ''}","${t.payment || ''}",${t.amount},"${(t.note || '').replace(/"/g, '""')}"\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `kanakku_statement_${selectedMonth}.csv`;
+  a.click();
+}
+
+function exportPDF() {
+  const element = document.getElementById('mobile-frame');
+  const opt = {
+    margin: 0.2,
+    filename: `kanakku_report_${selectedMonth}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+  };
+  html2pdf().from(element).set(opt).save();
+}
+
+function sendEmailReport() {
+  const email = data.userEmail || prompt('Enter recipient email address:');
+  if(!email) return;
+  data.userEmail = email;
+  save();
+  const txs = data.tx.filter(t => monthKey(t.date) === selectedMonth);
+  const total = txs.filter(t => t.kind === 'expense').reduce((sum, t) => sum + t.amount, 0);
+  const subject = encodeURIComponent(`Kanakku Expense Report - ${monthLabel(selectedMonth)}`);
+  const body = encodeURIComponent(`Hi,\n\nHere is my expense report for ${monthLabel(selectedMonth)} generated via Kanakku.\n\nTotal Spent: ${money(total)}\nSalary: ${money(data.salary)}\n\nTransactions Count: ${txs.length}\n\nRegards,\nKanakku User`);
+  window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+}
+
+window.onload = setup;
 </script>
 </body>
 </html>
