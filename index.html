@@ -46,7 +46,7 @@ body {
   background: var(--bg);
   font-family: 'Outfit', -apple-system, sans-serif;
   color: var(--text);
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: stretch;
@@ -55,7 +55,7 @@ body {
 #mobile-frame {
   width: 100%;
   max-width: 480px;
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
   position: relative;
   overflow: hidden;
@@ -262,10 +262,11 @@ input:checked + .slider:before { transform: translateX(24px); }
   </div>
 
   <header>
-    <div><h1>Kana<span>kku</span></h1></div>
-    <div style="display:flex;gap:8px;align-items:center">
+    <div><h1>Kana<span>க்ku</span></h1></div>
+    <div style="display:flex;gap:6px;align-items:center">
       <select id="monthFilter" style="height:36px;width:auto;font-size:13px;border-radius:10px"></select>
-      <button class="danger" id="clearBtn">Reset</button>
+      <button class="danger" id="clearMonthBtn" style="padding:0 8px;font-size:11px;height:36px">Clear Month</button>
+      <button class="danger" id="clearBtn" style="padding:0 8px;font-size:11px;height:36px">Reset All</button>
     </div>
   </header>
 
@@ -293,7 +294,7 @@ input:checked + .slider:before { transform: translateX(24px); }
         <div class="panel">
           <h2>50 / 30 / 20 Budget Rule</h2>
           <label>Monthly Salary (₹)</label>
-          <input type="number" id="salary" min="0" step="500" placeholder="e.g. 140000">
+          <input type="number" inputmode="numeric" pattern="[0-9]*" id="salary" min="0" step="500" placeholder="e.g. 140000">
           <div id="budgetProgress" style="margin-top:16px"></div>
         </div>
       </div>
@@ -306,7 +307,7 @@ input:checked + .slider:before { transform: translateX(24px); }
           <label>Pay Bill</label>
           <div class="row">
             <input type="date" id="payDate">
-            <input type="number" id="payAmount" min="1" placeholder="Amount">
+            <input type="number" inputmode="numeric" pattern="[0-9]*" id="payAmount" min="1" placeholder="Amount">
           </div>
           <button style="width:100%;margin-top:12px;background:rgba(249,115,22,0.12);color:#ea580c;border:1px solid rgba(249,115,22,0.25)" id="payBtn">Record Card Payment</button>
         </div>
@@ -392,7 +393,7 @@ input:checked + .slider:before { transform: translateX(24px); }
         </div>
         <div>
           <label>Amount (₹)</label>
-          <input type="number" id="amount" min="1" step="1" placeholder="0">
+          <input type="number" inputmode="numeric" pattern="[0-9]*" id="amount" min="1" step="1" placeholder="0">
         </div>
       </div>
       <div id="expenseFields">
@@ -610,9 +611,34 @@ function setupEvents(){
   document.getElementById('reminderTime').onchange = e => { data.reminderTime = e.target.value; save(); };
   document.getElementById('testReminderBtn').onclick = () => { triggerReminderNotification('Test Reminder: Did you forget to add any expenses today?'); };
 
-  document.getElementById('clearBtn').onclick=()=>{
-    if(confirm('Delete all saved data?')){
-      data={salary:0,mpin:'',userEmail:'',alloc:getDefaultAlloc(),tx:[],reminderEnabled:false,reminderTime:'21:00'};save();selectedMonth=currentMonth();setupMonths();render();
+  document.getElementById('clearMonthBtn').onclick = () => {
+    const monthLabelStr = monthLabel(selectedMonth);
+    if(confirm(`⚠️ WARNING: This will delete ALL transactions recorded in ${monthLabelStr} only!\n\nPast months and your settings will remain safe.`)) {
+      data.tx = data.tx.filter(t => monthKey(t.date) !== selectedMonth);
+      save();
+      setupMonths();
+      render();
+      alert(`All transactions for ${monthLabelStr} have been cleared.`);
+    }
+  };
+
+  document.getElementById('clearBtn').onclick = () => {
+    if(confirm('⚠️ WARNING: This will delete ALL saved financial data across all months!\n\nClick OK to download a backup file and reset, or Cancel to abort.')) {
+      if (data.tx.length > 0) {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `kanakku_emergency_backup_${today()}.json`;
+        a.click();
+      }
+      
+      data = { salary: 0, mpin: '', userEmail: '', alloc: getDefaultAlloc(), tx: [], reminderEnabled: false, reminderTime: '21:00' };
+      save();
+      selectedMonth = currentMonth();
+      setupMonths();
+      render();
+      alert('App has been reset to default state. Your emergency backup was downloaded.');
     }
   };
   document.getElementById('cashBtn').onclick=()=>setPayment('Cash / UPI / Debit');
@@ -640,6 +666,25 @@ function setupEvents(){
   const smsModal = document.getElementById('smsModal');
   document.getElementById('openSmsModal').onclick=()=>smsModal.classList.add('open');
   document.getElementById('closeSmsModal').onclick=()=>smsModal.classList.remove('open');
+
+  // Android Back Button Handler for Native/Capacitor Environments
+  document.addEventListener('backbutton', function (e) {
+    const addModal = document.getElementById('addModal');
+    const smsModal = document.getElementById('smsModal');
+    const mpinScreen = document.getElementById('mpinScreen');
+
+    if (addModal.classList.contains('open')) {
+      addModal.classList.remove('open');
+    } else if (smsModal.classList.contains('open')) {
+      smsModal.classList.remove('open');
+    } else if (mpinScreen && mpinScreen.style.display === 'flex') {
+      e.preventDefault();
+    } else {
+      if (navigator.app && typeof navigator.app.backHistory === 'function') {
+        navigator.app.backHistory();
+      }
+    }
+  }, false);
 }
 
 function initReminderDaemon() {
@@ -699,13 +744,11 @@ function parseAndSaveSms() {
   const text = document.getElementById('smsText').value.trim();
   if(!text) { alert('Please paste an SMS text first.'); return; }
   
-  // 1. Extract Amount
   const amtRegex = /(?:Rs\.?|INR|₹)\s*([\d,]+\.?\d*)/i;
   const amtMatch = text.match(amtRegex);
   if(!amtMatch) { alert('Could not detect a valid amount in the SMS.'); return; }
   const amount = parseFloat(amtMatch[1].replace(/,/g, ''));
 
-  // 2. Extract Date (Matches formats like DD/MM/YY or DD-MM-YYYY)
   let txDate = today();
   const dateRegex = /(?:on\s*)?(\d{2})[\/\-](\d{2})[\/\-](\d{2,4})/i;
   const dateMatch = text.match(dateRegex);
@@ -717,36 +760,40 @@ function parseAndSaveSms() {
     txDate = `${year}-${month}-${day}`;
   }
 
-  // 3. Determine Payment Method
   let payment = 'Cash / UPI / Debit';
   if(/credit card|cc\b|card ending/i.test(text)) { payment = 'Credit Card'; }
+  
+  let upiId = '';
+  const upiRegex = /([a-zA-Z0-9.\-_]{2,25}@[a-zA-Z]{2,15})/i;
+  const upiMatch = text.match(upiRegex);
+  if (upiMatch) {
+    upiId = upiMatch[1];
+  }
 
-  // 4. Extract Merchant / Recipient
   let merchant = 'Other';
   const toMatch = text.match(/(?:to|at|info\.?:|merchant:)\s*([A-Za-z0-9\s\*]+?)(?:\s+on|\s+ref|\s+avl|\s+avail|\.|$)/i);
   let note = 'Imported from SMS';
   if(toMatch && toMatch[1].trim().length > 1) {
     merchant = toMatch[1].trim();
-    note = `To ${merchant}`;
+    note = `To ${merchant}${upiId ? ' (' + upiId + ')' : ''}`;
+  } else if(upiId) {
+    note = `UPI: ${upiId}`;
   }
 
-  // 5. Intelligent Categorization
   let category = '📝 Other';
   const lower = (merchant + ' ' + text).toLowerCase();
   
-  if(/pareshith|friend|transfer|upi|self/i.test(lower) && !/swiggy|zomato|amazon|flipkart|dmart|blinkit|uber|ola/i.test(lower)) {
-    category = '📝 Other'; // Direct transfers or peer names map cleanly to Other/Transfer unless specified
-  } else if(/swiggy|zomato|restaurant|cafe|hotel|food|mcdonald|kfc|starbucks|dominos/i.test(lower)) category = '🍔 Food & Dining';
-  else if(/grocery|supermarket|dmart|blinkit|instamart|bigbasket|fresh/i.test(lower)) category = '🛒 Groceries';
-  else if(/vegetable|fruit|sabzi/i.test(lower)) category = '🥦 Veggies & Fruits';
-  else if(/uber|ola|rapido|metro|fuel|petrol|shell|hpcl|bpcl|iocl/i.test(lower)) category = '🚗 Transport & Fuel';
-  else if(/hospital|pharmacy|apollo|medplus|clinic|dr\b|doctor/i.test(lower)) category = '🏥 Medical & Health';
-  else if(/amazon|flipkart|myntra|zara|h&m|shopping/i.test(lower)) category = '🛍️ Shopping';
-  else if(/school|college|fee|udemy|coursera/i.test(lower)) category = '🎓 Education';
-  else if(/movie|netflix|prime|hotstar|spotify|game/i.test(lower)) category = '🎬 Entertainment';
-  else if(/salon|spa|beauty|hair/i.test(lower)) category = '💇‍♀️ Personal Care';
-  else if(/flight|hotel|airbnb|makemytrip|irctc/i.test(lower)) category = '✈️ Travel';
-  else if(/rent|maintenance|eb bill|electricity|water/i.test(lower)) category = '🏠 House & Rent';
+  if(/swiggy|zomato|restaurant|cafe|hotel|food|mcdonald|kfc|starbucks|dominos|bakes|sweets|mess|canteen/i.test(lower)) category = '🍔 Food & Dining';
+  else if(/grocery|supermarket|dmart|blinkit|instamart|bigbasket|fresh|nilgiris|reliance smart/i.test(lower)) category = '🛒 Groceries';
+  else if(/vegetable|fruit|sabzi|vendor|organic/i.test(lower)) category = '🥦 Veggies & Fruits';
+  else if(/uber|ola|rapido|metro|fuel|petrol|shell|hpcl|bpcl|iocl|parking/i.test(lower)) category = '🚗 Transport & Fuel';
+  else if(/hospital|pharmacy|apollo|medplus|clinic|dr\b|doctor|labs|medical/i.test(lower)) category = '🏥 Medical & Health';
+  else if(/amazon|flipkart|myntra|zara|h&m|shopping|ajio|meesho/i.test(lower)) category = '🛍️ Shopping';
+  else if(/school|college|fee|udemy|coursera|tuition|books/i.test(lower)) category = '🎓 Education';
+  else if(/movie|netflix|prime|hotstar|spotify|game|pvr|inox|bookmyshow/i.test(lower)) category = '🎬 Entertainment';
+  else if(/salon|spa|beauty|hair|grooming/i.test(lower)) category = '💇‍♀️ Personal Care';
+  else if(/flight|hotel|airbnb|makemytrip|irctc|bus|train|travel/i.test(lower)) category = '✈️ Travel';
+  else if(/rent|maintenance|eb bill|electricity|water|gas|broadband|wifi|jio|airtel|vi\b/i.test(lower)) category = '🏠 House & Rent';
 
   let chosenPillar = 'Wants (30%)';
   Object.entries(CATEGORY_PILLARS).forEach(([pillarName, pObj]) => {
@@ -765,6 +812,7 @@ function parseAndSaveSms() {
   };
 
   data.tx.unshift(tx);
+  data.tx.sort((a, b) => new Date(b.date) - new Date(a.date));
   save();
   setupMonths();
   document.getElementById('smsText').value = '';
@@ -908,7 +956,6 @@ function render() {
 
   const savingsBal = (data.salary || 0) - totalExpense;
 
-  // Summary Grid Cards
   document.getElementById('summary').innerHTML = `
     <div class="card card-full">
       <div>
@@ -927,7 +974,6 @@ function render() {
     </div>
   `;
 
-  // Render Transactions List
   const txContainer = document.getElementById('transactions');
   if(txs.length === 0) {
     txContainer.innerHTML = `<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">No transactions recorded for ${monthLabel(selectedMonth)}.</div>`;
@@ -949,13 +995,8 @@ function render() {
     `).join('');
   }
 
-  // Render Chart
   renderChart(txs);
-
-  // Render 50/30/20 Budget Breakdown
   renderBudgetRules(txs);
-
-  // Render Credit Card Summary Tab
   renderCreditCardTab(ccPending);
 }
 
@@ -1011,9 +1052,6 @@ function renderBudgetRules(txs) {
     const targetAmt = salary * (pObj.targetPct / 100);
     const catKeys = Object.keys(pObj.cats);
     const spentAmt = txs.filter(t => t.kind === 'expense' && catKeys.includes(t.category)).reduce((sum, t) => sum + t.amount, 0);
-    const targetPct = pObj.targetPct;
-    const isOver = spentAmt > targetAmt && targetAmt > 0;
-    const pillarPct = targetAmt > 0 ? Math.min(Math.round((spentAmt / targetAmt) * 100), 100) : 0;
 
     html += `
       <div class="pillar-header ${pObj.type}">
